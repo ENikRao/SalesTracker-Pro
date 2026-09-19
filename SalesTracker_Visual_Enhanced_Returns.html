@@ -1,0 +1,5294 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SalesTracker Pro</title>
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
+        body {
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        .gradient-dark {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+
+        .metric-glow {
+            box-shadow: 0 10px 35px rgba(15, 23, 42, 0.08);
+        }
+
+        .soft-grid {
+            background-image:
+                linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .chart-card {
+            min-height: 360px;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.45;
+                transform: scale(0.85);
+            }
+        }
+
+        .table-row-accent:hover {
+            background: #f8fafc;
+        }
+
+        .section-kicker {
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+            border-color: #60a5fa !important;
+        }
+
+        .nav-active {
+            background: #1e293b !important;
+            color: white !important;
+        }
+
+        .nav-active svg {
+            color: #93c5fd !important;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
+            }
+
+            .mobile-sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="h-full bg-slate-50 text-slate-900">
+
+<div class="flex h-screen overflow-hidden">
+
+    <!-- MOBILE HEADER -->
+    <header class="fixed top-0 left-0 right-0 z-30 flex items-center justify-between bg-slate-900 px-4 py-3 text-white md:hidden">
+        <button onclick="toggleMobileMenu()" class="rounded-lg p-2 hover:bg-slate-800">
+            <i data-lucide="menu"></i>
+        </button>
+
+        <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500">
+                <i data-lucide="bar-chart-3" class="h-5 w-5"></i>
+            </div>
+            <span class="font-bold">SalesTracker Pro</span>
+        </div>
+
+        <div id="mobile-sync-status" class="flex items-center gap-1 text-xs text-slate-300">
+            <span class="pulse-dot bg-emerald-400"></span>
+        </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar"
+           class="mobile-sidebar fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-slate-950 text-white md:relative md:translate-x-0">
+
+        <div class="flex h-20 items-center gap-3 border-b border-slate-800 px-6">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-900/30">
+                <i data-lucide="bar-chart-3" class="h-6 w-6"></i>
+            </div>
+
+            <div>
+                <div class="text-lg font-bold tracking-tight">SalesTracker</div>
+                <div class="text-xs text-slate-400">Professional Edition</div>
+            </div>
+        </div>
+
+        <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-5">
+
+            <div class="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Main
+            </div>
+
+            <button onclick="switchView('dashboard')"
+                    data-view="dashboard"
+                    class="nav-button nav-active flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition hover:bg-slate-800">
+                <i data-lucide="layout-dashboard" class="h-5 w-5 text-slate-400"></i>
+                Dashboard
+            </button>
+
+            <button onclick="switchView('sales')"
+                    data-view="sales"
+                    class="nav-button flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-300 transition hover:bg-slate-800">
+                <i data-lucide="receipt" class="h-5 w-5 text-slate-400"></i>
+                Sales Entry & Log
+            </button>
+
+            <button onclick="switchView('inventory')"
+                    data-view="inventory"
+                    class="nav-button flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-300 transition hover:bg-slate-800">
+                <i data-lucide="boxes" class="h-5 w-5 text-slate-400"></i>
+                Product Inventory
+            </button>
+
+            <button onclick="switchView('executives')"
+                    data-view="executives"
+                    class="nav-button flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-300 transition hover:bg-slate-800">
+                <i data-lucide="users" class="h-5 w-5 text-slate-400"></i>
+                Sales Executives
+            </button>
+
+            <button onclick="switchView('dealers')"
+                    data-view="dealers"
+                    class="nav-button flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-300 transition hover:bg-slate-800">
+                <i data-lucide="store" class="h-5 w-5 text-slate-400"></i>
+                Dealer Insights
+            </button>
+
+            <div class="mb-3 mt-7 px-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                System
+            </div>
+
+            <button onclick="switchView('settings')"
+                    data-view="settings"
+                    class="nav-button flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium text-slate-300 transition hover:bg-slate-800">
+                <i data-lucide="settings" class="h-5 w-5 text-slate-400"></i>
+                Google Sheets Sync
+            </button>
+
+        </nav>
+
+        <div class="border-t border-slate-800 p-4">
+            <div class="rounded-xl bg-slate-900 p-4">
+                <div class="mb-2 flex items-center justify-between">
+                    <span class="text-xs font-medium text-slate-400">Sync Status</span>
+                    <span id="sidebar-sync-dot" class="pulse-dot bg-amber-400"></span>
+                </div>
+
+                <div id="sidebar-sync-text" class="text-sm font-semibold text-slate-200">
+                    Not Connected
+                </div>
+
+                <div class="mt-1 text-xs text-slate-500">
+                    Google Sheets
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 overflow-y-auto pt-16 md:pt-0">
+
+        <!-- ========================= -->
+        <!-- DASHBOARD -->
+        <!-- ========================= -->
+
+        <section id="dashboard-view" class="view-section active space-y-6 p-4 md:p-8">
+
+            <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                <div>
+                    <div class="section-kicker">Overview</div>
+                    <h1 class="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+                        Sales Dashboard
+                    </h1>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Monitor sales, inventory and team performance.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <span id="dashboard-sync-dot" class="pulse-dot bg-amber-400"></span>
+                    <span id="dashboard-sync-text" class="text-sm font-medium text-slate-600">
+                        Waiting for sync
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-slate-500">Total Sales</div>
+                            <div id="kpi-total-sales" class="mt-2 text-3xl font-bold text-slate-900">$0.00</div>
+                        </div>
+
+                        <div class="rounded-xl bg-blue-50 p-3 text-blue-600">
+                            <i data-lucide="dollar-sign" class="h-5 w-5"></i>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-xs text-slate-500">
+                        Net revenue after returns
+                    </div>
+                </div>
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-slate-500">Units Sold</div>
+                            <div id="kpi-units-sold" class="mt-2 text-3xl font-bold text-slate-900">0</div>
+                        </div>
+
+                        <div class="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                            <i data-lucide="package-check" class="h-5 w-5"></i>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-xs text-slate-500">
+                        Net units after returns
+                    </div>
+                </div>
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-slate-500">Inventory Received</div>
+                            <div id="kpi-inventory" class="mt-2 text-3xl font-bold text-slate-900">0</div>
+                        </div>
+
+                        <div class="rounded-xl bg-violet-50 p-3 text-violet-600">
+                            <i data-lucide="package-plus" class="h-5 w-5"></i>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-xs text-slate-500">
+                        Total stock received
+                    </div>
+                </div>
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-slate-500">Low Stock</div>
+                            <div id="kpi-low-stock" class="mt-2 text-3xl font-bold text-slate-900">0</div>
+                        </div>
+
+                        <div class="rounded-xl bg-amber-50 p-3 text-amber-600">
+                            <i data-lucide="triangle-alert" class="h-5 w-5"></i>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-xs text-slate-500">
+                        Products at or below 10 units
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+                <div class="glass-card rounded-2xl p-6 lg:col-span-2">
+                    <div class="mb-6 flex items-center justify-between">
+                        <div>
+                            <div class="section-kicker">Performance</div>
+                            <h2 class="mt-1 text-xl font-bold">Sales Performance</h2>
+                        </div>
+
+                        <div class="rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                            Revenue
+                        </div>
+                    </div>
+
+                    <div class="h-[320px]">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="section-kicker">Leader</div>
+                    <h2 class="mt-1 text-xl font-bold">Top Executive</h2>
+
+                    <div class="mt-8 text-center">
+                        <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-900 text-2xl font-bold text-white">
+                            <span id="top-executive-initial">--</span>
+                        </div>
+
+                        <div id="top-executive-name" class="mt-4 text-lg font-bold">
+                            No Data
+                        </div>
+
+                        <div class="mt-1 text-sm text-slate-500">
+                            Highest net revenue
+                        </div>
+
+                        <div id="top-executive-revenue" class="mt-4 text-3xl font-bold text-blue-600">
+                            $0.00
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="mb-5 flex items-center justify-between">
+                        <div>
+                            <div class="section-kicker">Activity</div>
+                            <h2 class="mt-1 text-xl font-bold">Recent Sales</h2>
+                        </div>
+
+                        <button onclick="switchView('sales')"
+                                class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+                            View All
+                        </button>
+                    </div>
+
+                    <div id="recent-sales-list" class="space-y-3"></div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="mb-5">
+                        <div class="section-kicker">Inventory</div>
+                        <h2 class="mt-1 text-xl font-bold">Stock Health</h2>
+                    </div>
+
+                    <div class="h-[280px]">
+                        <canvas id="stockChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- SALES -->
+        <!-- ========================= -->
+
+        <section id="sales-view" class="view-section space-y-6 p-4 md:p-8">
+
+            <div class="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+                <div>
+                    <div class="section-kicker">Transactions</div>
+                    <h1 class="mt-1 text-3xl font-bold">Sales Entry & Log</h1>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Record sales and returns and review transaction history.
+                    </p>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+
+                <div class="mb-6 flex items-center gap-3">
+                    <div class="rounded-xl bg-blue-50 p-3 text-blue-600">
+                        <i data-lucide="plus-circle" class="h-5 w-5"></i>
+                    </div>
+
+                    <div>
+                        <div class="section-kicker">New Transaction</div>
+                        <h2 class="text-xl font-bold">Add Sale</h2>
+                    </div>
+                </div>
+
+                <form id="sales-form"
+                      onsubmit="handleSalesSubmit(event)"
+                      class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-5">
+
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">
+                            Sales Executive
+                        </label>
+
+                        <select id="sales-executive"
+                                required
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                            <option value="">Select Executive</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">
+                            Dealer Name
+                        </label>
+
+                        <input id="sales-dealer"
+                               type="text"
+                               required
+                               maxlength="150"
+                               placeholder="Enter dealer name"
+                               class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">
+                            Product
+                        </label>
+
+                        <select id="sales-product"
+                                required
+                                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                            <option value="">Select Product</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">
+                            Quantity
+                        </label>
+
+                        <input id="sales-quantity"
+                               type="number"
+                               step="1"
+                               required
+                               placeholder="Use negative for return"
+                               class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </div>
+
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">
+                            Selling Price
+                        </label>
+
+                        <input id="sales-price"
+                               type="number"
+                               step="0.01"
+                               min="0"
+                               required
+                               placeholder="0.00"
+                               class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </div>
+
+                    <div class="md:col-span-2 xl:col-span-5">
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/10 hover:bg-slate-800">
+                            <i data-lucide="save" class="h-4 w-4"></i>
+                            Save Transaction
+                        </button>
+
+                        <span class="ml-3 text-xs text-slate-500">
+                            Enter a negative quantity for product returns.
+                        </span>
+                    </div>
+
+                </form>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+
+                <div class="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+
+                    <div>
+                        <div class="section-kicker">History</div>
+                        <h2 class="mt-1 text-xl font-bold">Sales Transactions</h2>
+                    </div>
+
+                    <div class="flex flex-col gap-2 sm:flex-row">
+
+                        <input id="sales-search"
+                               oninput="renderSalesTable()"
+                               type="text"
+                               placeholder="Search sales..."
+                               class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+
+                        <button onclick="exportToCSV('sales')"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">
+                            <i data-lucide="download" class="h-4 w-4"></i>
+                            Export CSV
+                        </button>
+
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[900px] text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                                <th class="px-4 py-3">Date</th>
+                                <th class="px-4 py-3">Executive</th>
+                                <th class="px-4 py-3">Dealer</th>
+                                <th class="px-4 py-3">Product</th>
+                                <th class="px-4 py-3">Quantity</th>
+                                <th class="px-4 py-3">Price</th>
+                                <th class="px-4 py-3">Revenue</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="sales-table-body"></tbody>
+                    </table>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- INVENTORY -->
+        <!-- ========================= -->
+
+        <section id="inventory-view" class="view-section space-y-6 p-4 md:p-8">
+
+            <div>
+                <div class="section-kicker">Products</div>
+                <h1 class="mt-1 text-3xl font-bold">Product Inventory</h1>
+                <p class="mt-1 text-sm text-slate-500">
+                    Monitor incoming stock, sales outflow and current stock.
+                </p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+
+                <div class="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+
+                    <div>
+                        <div class="section-kicker">Stock Position</div>
+                        <h2 class="mt-1 text-xl font-bold">Inventory Overview</h2>
+                    </div>
+
+                    <button onclick="exportToCSV('inventory')"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">
+                        <i data-lucide="download" class="h-4 w-4"></i>
+                        Export CSV
+                    </button>
+
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[800px] text-left text-sm">
+
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                                <th class="px-4 py-3">Product Name</th>
+                                <th class="px-4 py-3">Total In</th>
+                                <th class="px-4 py-3">Total Out</th>
+                                <th class="px-4 py-3">Current Stock</th>
+                                <th class="px-4 py-3">Status</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="inventory-table-body"></tbody>
+
+                    </table>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- EXECUTIVES -->
+        <!-- ========================= -->
+
+        <section id="executives-view" class="view-section space-y-6 p-4 md:p-8">
+
+            <div>
+                <div class="section-kicker">Team</div>
+                <h1 class="mt-1 text-3xl font-bold">Sales Executives</h1>
+                <p class="mt-1 text-sm text-slate-500">
+                    Track transaction activity and revenue generated by each executive.
+                </p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+
+                <div class="overflow-x-auto">
+
+                    <table class="w-full min-w-[700px] text-left text-sm">
+
+                        <thead>
+                            <tr class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                                <th class="px-4 py-3">Executive</th>
+                                <th class="px-4 py-3">Sales Count</th>
+                                <th class="px-4 py-3">Revenue</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="executives-table-body"></tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ====================================================== -->
+        <!-- DEALER INSIGHTS -->
+        <!-- ====================================================== -->
+
+        <section id="dealers-view" class="view-section space-y-6 p-4 md:p-8">
+
+            <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+
+                <div>
+                    <div class="section-kicker">Dealer Analytics</div>
+
+                    <h1 class="mt-1 text-3xl font-bold tracking-tight">
+                        Dealer Insights
+                    </h1>
+
+                    <p class="mt-1 max-w-3xl text-sm text-slate-500">
+                        Understand dealer-wise sales performance, transaction activity,
+                        units sold, returns and revenue using your existing sales data.
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                    <i data-lucide="database" class="h-4 w-4 text-blue-600"></i>
+
+                    <span class="text-xs font-medium text-blue-700">
+                        Based on existing Sales data
+                    </span>
+                </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+
+                    <div class="flex items-start justify-between">
+
+                        <div>
+                            <div class="text-sm font-medium text-slate-500">
+                                Total Dealers
+                            </div>
+
+                            <div id="dealer-kpi-total"
+                                 class="mt-2 text-3xl font-bold text-slate-900">
+                                0
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-blue-50 p-3 text-blue-600">
+                            <i data-lucide="store" class="h-5 w-5"></i>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-4 text-xs text-slate-500">
+                        Unique dealer names
+                    </div>
+
+                </div>
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+
+                    <div class="flex items-start justify-between">
+
+                        <div class="min-w-0">
+                            <div class="text-sm font-medium text-slate-500">
+                                Top Dealer
+                            </div>
+
+                            <div id="dealer-kpi-top-name"
+                                 class="mt-2 truncate text-xl font-bold text-slate-900">
+                                --
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                            <i data-lucide="trophy" class="h-5 w-5"></i>
+                        </div>
+
+                    </div>
+
+                    <div id="dealer-kpi-top-revenue"
+                         class="mt-3 text-lg font-bold text-emerald-600">
+                        $0.00
+                    </div>
+
+                    <div class="mt-1 text-xs text-slate-500">
+                        Highest net revenue
+                    </div>
+
+                </div>
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+
+                    <div class="flex items-start justify-between">
+
+                        <div class="min-w-0">
+                            <div class="text-sm font-medium text-slate-500">
+                                Top by Units
+                            </div>
+
+                            <div id="dealer-kpi-top-units-name"
+                                 class="mt-2 truncate text-xl font-bold text-slate-900">
+                                --
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-violet-50 p-3 text-violet-600">
+                            <i data-lucide="package-check" class="h-5 w-5"></i>
+                        </div>
+
+                    </div>
+
+                    <div id="dealer-kpi-top-units"
+                         class="mt-3 text-lg font-bold text-violet-600">
+                        0
+                    </div>
+
+                    <div class="mt-1 text-xs text-slate-500">
+                        Highest net units
+                    </div>
+
+                </div>
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+
+                    <div class="flex items-start justify-between">
+
+                        <div>
+                            <div class="text-sm font-medium text-slate-500">
+                                Transactions
+                            </div>
+
+                            <div id="dealer-kpi-transactions"
+                                 class="mt-2 text-3xl font-bold text-slate-900">
+                                0
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-amber-50 p-3 text-amber-600">
+                            <i data-lucide="receipt" class="h-5 w-5"></i>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-4 text-xs text-slate-500">
+                        All dealer transactions
+                    </div>
+
+                </div>
+
+                <div class="glass-card metric-glow rounded-2xl p-5">
+
+                    <div class="flex items-start justify-between">
+
+                        <div>
+                            <div class="text-sm font-medium text-slate-500">
+                                Return Units
+                            </div>
+
+                            <div id="dealer-kpi-returns"
+                                 class="mt-2 text-3xl font-bold text-slate-900">
+                                0
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-rose-50 p-3 text-rose-600">
+                            <i data-lucide="rotate-ccw" class="h-5 w-5"></i>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-4 text-xs text-slate-500">
+                        Units returned by dealers
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+
+                <div class="glass-card rounded-2xl p-6 xl:col-span-2">
+
+                    <div class="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+
+                        <div>
+                            <div class="section-kicker">Dealer Performance</div>
+
+                            <h2 class="mt-1 text-xl font-bold">
+                                Top Dealers by Revenue
+                            </h2>
+
+                            <p class="mt-1 text-xs text-slate-500">
+                                Shows the top 10 dealers based on net revenue.
+                            </p>
+                        </div>
+
+                        <div class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
+                            Top 10
+                        </div>
+
+                    </div>
+
+                    <div class="h-[350px]">
+                        <canvas id="dealerChart"></canvas>
+                    </div>
+
+                </div>
+
+                <div class="glass-card rounded-2xl p-6">
+
+                    <div class="section-kicker">
+                        Quick View
+                    </div>
+
+                    <h2 class="mt-1 text-xl font-bold">
+                        Dealer Snapshot
+                    </h2>
+
+                    <div id="dealer-snapshot-list"
+                         class="mt-6 space-y-4">
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+
+                <div class="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+
+                    <div>
+                        <div class="section-kicker">
+                            Dealer Performance
+                        </div>
+
+                        <h2 class="mt-1 text-xl font-bold">
+                            Dealer-wise Sales Analysis
+                        </h2>
+
+                        <p class="mt-1 text-xs text-slate-500">
+                            Revenue is calculated as quantity × selling price.
+                            Returns reduce net revenue and net units.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col gap-2 sm:flex-row">
+
+                        <input id="dealer-search"
+                               oninput="renderDealerTable()"
+                               type="text"
+                               placeholder="Search dealer..."
+                               class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
+
+                        <button onclick="exportToCSV('dealers')"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold hover:bg-slate-50">
+
+                            <i data-lucide="download" class="h-4 w-4"></i>
+
+                            Export CSV
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="overflow-x-auto">
+
+                    <table class="w-full min-w-[1100px] text-left text-sm">
+
+                        <thead>
+
+                            <tr class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+
+                                <th class="px-4 py-3">Rank</th>
+                                <th class="px-4 py-3">Dealer</th>
+                                <th class="px-4 py-3">Transactions</th>
+                                <th class="px-4 py-3">Gross Units</th>
+                                <th class="px-4 py-3">Return Units</th>
+                                <th class="px-4 py-3">Net Units</th>
+                                <th class="px-4 py-3">Revenue</th>
+                                <th class="px-4 py-3">Avg. Transaction</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="dealer-table-body"></tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- SETTINGS -->
+        <!-- ========================= -->
+
+        <section id="settings-view" class="view-section space-y-6 p-4 md:p-8">
+
+            <div>
+                <div class="section-kicker">Configuration</div>
+                <h1 class="mt-1 text-3xl font-bold">Google Sheets Sync</h1>
+                <p class="mt-1 text-sm text-slate-500">
+                    Connect SalesTracker Pro to your Google Apps Script endpoint.
+                </p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+
+                <div class="mb-6 flex items-center gap-3">
+                    <div class="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                        <i data-lucide="cloud" class="h-5 w-5"></i>
+                    </div>
+
+                    <div>
+                        <div class="section-kicker">Connection</div>
+                        <h2 class="text-xl font-bold">Google Apps Script URL</h2>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-slate-700">
+                            Web App URL
+                        </label>
+
+                        <input id="script-url"
+                               type="url"
+                               placeholder="https://script.google.com/macros/s/..."
+                               class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+
+                        <button onclick="saveScriptUrl()"
+                                class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
+
+                            <i data-lucide="save" class="h-4 w-4"></i>
+                            Save URL
+
+                        </button>
+
+                        <button onclick="triggerSync()"
+                                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold hover:bg-slate-50">
+
+                            <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+                            Sync Now
+
+                        </button>
+
+                    </div>
+
+                    <div id="settings-status"
+                         class="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                        No connection configured.
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="glass-card rounded-2xl p-6">
+
+                <div class="section-kicker">
+                    Data Structure
+                </div>
+
+                <h2 class="mt-1 text-xl font-bold">
+                    Expected Google Sheets Data
+                </h2>
+
+                <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+                    <div class="rounded-xl border border-slate-200 p-4">
+                        <div class="font-semibold">Executives</div>
+                        <div class="mt-1 text-xs text-slate-500">
+                            Sales executive records
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-slate-200 p-4">
+                        <div class="font-semibold">Products</div>
+                        <div class="mt-1 text-xs text-slate-500">
+                            Product master data
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-slate-200 p-4">
+                        <div class="font-semibold">Stock In</div>
+                        <div class="mt-1 text-xs text-slate-500">
+                            Inventory received
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                        <div class="font-semibold text-blue-900">
+                            Sales
+                        </div>
+
+                        <div class="mt-1 text-xs text-blue-700">
+                            Includes DealerName for Dealer Insights
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<!-- ============================================================ -->
+<!-- JAVASCRIPT -->
+<!-- ============================================================ -->
+
+<script>
+
+    /* =========================================================
+       GLOBAL DATA
+    ========================================================= */
+
+    let rawData = {
+        executives: [],
+        products: [],
+        stockIn: [],
+        sales: []
+    };
+
+    let scriptUrl = localStorage.getItem('sheet_sync_url') || '';
+
+    let revenueChart = null;
+    let stockChart = null;
+    let dealerChart = null;
+
+
+    /* =========================================================
+       OFFLINE DATABASE
+    ========================================================= */
+
+    const OFFLINE_DB_NAME = 'SalesTrackerProDB';
+    const OFFLINE_DB_VERSION = 1;
+    const OFFLINE_STORE_NAME = 'pendingSales';
+
+
+    function openOfflineDB() {
+
+        return new Promise((resolve, reject) => {
+
+            if (!('indexedDB' in window)) {
+                reject(new Error('IndexedDB is not supported by this browser.'));
+                return;
+            }
+
+            const request = indexedDB.open(
+                OFFLINE_DB_NAME,
+                OFFLINE_DB_VERSION
+            );
+
+            request.onupgradeneeded = event => {
+
+                const db = event.target.result;
+
+                if (!db.objectStoreNames.contains(OFFLINE_STORE_NAME)) {
+
+                    const store = db.createObjectStore(
+                        OFFLINE_STORE_NAME,
+                        {
+                            keyPath: 'localId'
+                        }
+                    );
+
+                    store.createIndex(
+                        'createdAt',
+                        'createdAt',
+                        {
+                            unique: false
+                        }
+                    );
+
+                }
+
+            };
+
+            request.onsuccess = () => {
+
+                const db = request.result;
+
+                db.onversionchange = () => {
+                    db.close();
+                };
+
+                resolve(db);
+
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+
+        });
+
+    }
+
+
+    function createLocalId() {
+
+        if (
+            typeof crypto !== 'undefined' &&
+            crypto.randomUUID
+        ) {
+            return crypto.randomUUID();
+        }
+
+        return (
+            Date.now().toString(36) +
+            '-' +
+            Math.random().toString(36).substring(2)
+        );
+
+    }
+
+
+    async function savePendingSale(sale) {
+
+        const db = await openOfflineDB();
+
+        return new Promise((resolve, reject) => {
+
+            const transaction = db.transaction(
+                OFFLINE_STORE_NAME,
+                'readwrite'
+            );
+
+            const store =
+                transaction.objectStore(
+                    OFFLINE_STORE_NAME
+                );
+
+            const pendingSale = {
+                ...sale,
+
+                localId:
+                    sale.localId ||
+                    createLocalId(),
+
+                createdAt:
+                    sale.createdAt ||
+                    Date.now(),
+
+                syncStatus:
+                    'pending'
+            };
+
+            const request =
+                store.put(pendingSale);
+
+            request.onsuccess = () => {
+                resolve(pendingSale);
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+
+            transaction.oncomplete = () => {
+                db.close();
+            };
+
+        });
+
+    }
+
+
+    async function getPendingSales() {
+
+        const db = await openOfflineDB();
+
+        return new Promise((resolve, reject) => {
+
+            const transaction =
+                db.transaction(
+                    OFFLINE_STORE_NAME,
+                    'readonly'
+                );
+
+            const store =
+                transaction.objectStore(
+                    OFFLINE_STORE_NAME
+                );
+
+            const request =
+                store.getAll();
+
+            request.onsuccess = () => {
+
+                const records =
+                    request.result || [];
+
+                records.sort(
+                    (a, b) =>
+                        Number(a.createdAt || 0) -
+                        Number(b.createdAt || 0)
+                );
+
+                resolve(records);
+
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+
+            transaction.oncomplete = () => {
+                db.close();
+            };
+
+        });
+
+    }
+
+
+    async function removePendingSale(localId) {
+
+        const db = await openOfflineDB();
+
+        return new Promise((resolve, reject) => {
+
+            const transaction =
+                db.transaction(
+                    OFFLINE_STORE_NAME,
+                    'readwrite'
+                );
+
+            const store =
+                transaction.objectStore(
+                    OFFLINE_STORE_NAME
+                );
+
+            const request =
+                store.delete(localId);
+
+            request.onsuccess = () => {
+                resolve();
+            };
+
+            request.onerror = () => {
+                reject(request.error);
+            };
+
+            transaction.oncomplete = () => {
+                db.close();
+            };
+
+        });
+
+    }
+
+
+    async function getPendingSaleCount() {
+
+        try {
+
+            const sales =
+                await getPendingSales();
+
+            return sales.length;
+
+        } catch (error) {
+
+            console.warn(
+                'Unable to read pending sales:',
+                error
+            );
+
+            return 0;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       OFFLINE STATUS
+    ========================================================= */
+
+    function updateOfflineStatus() {
+
+        let indicator =
+            document.getElementById(
+                'offlineStatusIndicator'
+            );
+
+        if (!indicator) {
+
+            indicator =
+                document.createElement('div');
+
+            indicator.id =
+                'offlineStatusIndicator';
+
+            indicator.style.position =
+                'fixed';
+
+            indicator.style.bottom =
+                '16px';
+
+            indicator.style.right =
+                '16px';
+
+            indicator.style.zIndex =
+                '9999';
+
+            indicator.style.padding =
+                '10px 14px';
+
+            indicator.style.borderRadius =
+                '9999px';
+
+            indicator.style.fontSize =
+                '13px';
+
+            indicator.style.fontWeight =
+                '600';
+
+            indicator.style.boxShadow =
+                '0 4px 12px rgba(0,0,0,.15)';
+
+            document.body.appendChild(
+                indicator
+            );
+
+        }
+
+
+        if (navigator.onLine) {
+
+            indicator.textContent =
+                '● Online';
+
+            indicator.style.background =
+                '#dcfce7';
+
+            indicator.style.color =
+                '#166534';
+
+        } else {
+
+            indicator.textContent =
+                '● Offline';
+
+            indicator.style.background =
+                '#fee2e2';
+
+            indicator.style.color =
+                '#991b1b';
+
+        }
+
+
+        updatePendingBadge();
+
+    }
+
+
+    /* =========================================================
+       PENDING SALES BADGE
+    ========================================================= */
+
+    async function updatePendingBadge() {
+
+        const count =
+            await getPendingSaleCount();
+
+        let badge =
+            document.getElementById(
+                'pendingSalesBadge'
+            );
+
+        if (!badge) {
+
+            badge =
+                document.createElement('div');
+
+            badge.id =
+                'pendingSalesBadge';
+
+            badge.style.position =
+                'fixed';
+
+            badge.style.bottom =
+                '64px';
+
+            badge.style.right =
+                '16px';
+
+            badge.style.zIndex =
+                '9998';
+
+            badge.style.padding =
+                '8px 12px';
+
+            badge.style.borderRadius =
+                '8px';
+
+            badge.style.fontSize =
+                '12px';
+
+            badge.style.fontWeight =
+                '600';
+
+            badge.style.display =
+                'none';
+
+            badge.style.boxShadow =
+                '0 4px 12px rgba(0,0,0,.10)';
+
+            document.body.appendChild(
+                badge
+            );
+
+        }
+
+
+        if (count > 0) {
+
+            badge.style.display =
+                'block';
+
+            badge.style.background =
+                '#fef3c7';
+
+            badge.style.color =
+                '#92400e';
+
+            badge.textContent =
+                `${count} sale${count === 1 ? '' : 's'} waiting to sync`;
+
+        } else {
+
+            badge.style.display =
+                'none';
+
+        }
+
+    }
+
+
+    /* =========================================================
+       LOCAL SALES UPDATE
+    ========================================================= */
+
+    function addSaleToLocalData(sale) {
+
+        if (!rawData.sales) {
+            rawData.sales = [];
+        }
+
+        const localSale = {
+            ...sale,
+            _offline: true
+        };
+
+        rawData.sales.push(localSale);
+
+        refreshDashboards();
+
+    }
+
+
+    /* =========================================================
+       OFFLINE-FIRST SALE SUBMISSION
+    ========================================================= */
+
+    async function saveSaleOfflineFirst(payload) {
+
+        /*
+         * Add the transaction locally first.
+         *
+         * This makes Dashboard, Dealer Insights, Inventory,
+         * Recent Sales and Sales Log update immediately.
+         */
+
+        addSaleToLocalData(payload);
+
+
+        /*
+         * No internet:
+         * save immediately to IndexedDB.
+         */
+
+        if (!navigator.onLine) {
+
+            try {
+
+                await savePendingSale(payload);
+
+                updateOfflineStatus();
+
+                showOfflineMessage(
+                    'Sale saved offline. It will sync automatically when internet returns.'
+                );
+
+                updateSyncStatus(
+                    null,
+                    'Saved Offline'
+                );
+
+                return {
+                    success: true,
+                    offline: true
+                };
+
+            } catch (error) {
+
+                console.error(
+                    'Offline save failed:',
+                    error
+                );
+
+                showOfflineMessage(
+                    'Could not save the sale locally. Please try again.'
+                );
+
+                return {
+                    success: false,
+                    offline: true
+                };
+
+            }
+
+        }
+
+
+        /*
+         * Internet available:
+         * attempt Google Sheets first.
+         */
+
+        try {
+
+            updateSyncStatus(
+                null,
+                'Saving...'
+            );
+
+            await sendPostDirect(
+                payload
+            );
+
+            showOfflineMessage(
+                'Sale saved and synced to Google Sheets.'
+            );
+
+            /*
+             * Refresh server data after successful save.
+             */
+
+            try {
+
+                await triggerSync();
+
+            } catch (refreshError) {
+
+                console.warn(
+                    'Post-save refresh failed:',
+                    refreshError
+                );
+
+            }
+
+            return {
+                success: true,
+                offline: false
+            };
+
+        } catch (error) {
+
+            console.warn(
+                'Online save failed. Queueing locally:',
+                error
+            );
+
+
+            /*
+             * The request failed.
+             *
+             * Save it safely in IndexedDB.
+             */
+
+            try {
+
+                await savePendingSale(
+                    payload
+                );
+
+                updateOfflineStatus();
+
+                updateSyncStatus(
+                    false,
+                    'Saved Offline'
+                );
+
+                showOfflineMessage(
+                    'Internet connection failed. Sale saved locally and will sync later.'
+                );
+
+                return {
+                    success: true,
+                    offline: true
+                };
+
+            } catch (queueError) {
+
+                console.error(
+                    'Unable to queue sale:',
+                    queueError
+                );
+
+                showOfflineMessage(
+                    'Sale could not be saved. Please try again.'
+                );
+
+                return {
+                    success: false,
+                    offline: false
+                };
+
+            }
+
+        }
+
+    }
+
+
+    /* =========================================================
+       DIRECT GOOGLE SHEETS POST
+    ========================================================= */
+
+    async function sendPostDirect(payload) {
+
+        if (!scriptUrl) {
+
+            throw new Error(
+                'Google Sheets sync URL is not configured.'
+            );
+
+        }
+
+
+        if (!navigator.onLine) {
+
+            throw new Error(
+                'No internet connection.'
+            );
+
+        }
+
+
+        const response =
+            await fetch(
+                scriptUrl,
+                {
+                    method: 'POST',
+
+                    headers: {
+                        'Content-Type':
+                            'text/plain;charset=utf-8'
+                    },
+
+                    body:
+                        JSON.stringify(payload)
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Server returned ${response.status}`
+            );
+
+        }
+
+
+        return response;
+
+    }
+
+
+    /* =========================================================
+       SYNC PENDING SALES
+    ========================================================= */
+
+    async function syncPendingSales() {
+
+        if (!navigator.onLine) {
+            return;
+        }
+
+        if (!scriptUrl) {
+            return;
+        }
+
+
+        let pendingSales = [];
+
+
+        try {
+
+            pendingSales =
+                await getPendingSales();
+
+        } catch (error) {
+
+            console.error(
+                'Unable to load pending sales:',
+                error
+            );
+
+            return;
+
+        }
+
+
+        if (!pendingSales.length) {
+
+            updatePendingBadge();
+
+            return;
+
+        }
+
+
+        console.log(
+            `Syncing ${pendingSales.length} offline sale(s)...`
+        );
+
+
+        updateSyncStatus(
+            null,
+            `Syncing ${pendingSales.length} offline sale(s)...`
+        );
+
+
+        for (const sale of pendingSales) {
+
+            if (!navigator.onLine) {
+                break;
+            }
+
+
+            try {
+
+                /*
+                 * Only send the original Google Sheets
+                 * transaction fields.
+                 */
+
+                const payload = {
+
+                    action:
+                        sale.action,
+
+                    Date:
+                        sale.Date,
+
+                    ExecutiveName:
+                        sale.ExecutiveName,
+
+                    DealerName:
+                        sale.DealerName,
+
+                    ProductName:
+                        sale.ProductName,
+
+                    Quantity:
+                        sale.Quantity,
+
+                    SellingPrice:
+                        sale.SellingPrice
+
+                };
+
+
+                await sendPostDirect(
+                    payload
+                );
+
+
+                await removePendingSale(
+                    sale.localId
+                );
+
+
+                console.log(
+                    'Offline sale synced:',
+                    sale.localId
+                );
+
+
+            } catch (error) {
+
+                console.warn(
+                    'Offline sale could not sync yet:',
+                    error
+                );
+
+
+                /*
+                 * Stop here.
+                 *
+                 * The current record and all remaining
+                 * records remain safely in IndexedDB.
+                 */
+
+                break;
+
+            }
+
+        }
+
+
+        updatePendingBadge();
+
+
+        /*
+         * Refresh Google Sheets data after successful
+         * offline synchronization.
+         */
+
+        try {
+
+            await triggerSync();
+
+        } catch (error) {
+
+            console.warn(
+                'Post-sync refresh failed:',
+                error
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       USER MESSAGE
+    ========================================================= */
+
+    function showOfflineMessage(message) {
+
+        let toast =
+            document.getElementById(
+                'offlineToast'
+            );
+
+
+        if (!toast) {
+
+            toast =
+                document.createElement('div');
+
+            toast.id =
+                'offlineToast';
+
+            toast.style.position =
+                'fixed';
+
+            toast.style.top =
+                '20px';
+
+            toast.style.right =
+                '20px';
+
+            toast.style.zIndex =
+                '10000';
+
+            toast.style.maxWidth =
+                '360px';
+
+            toast.style.padding =
+                '14px 18px';
+
+            toast.style.borderRadius =
+                '10px';
+
+            toast.style.background =
+                '#0f172a';
+
+            toast.style.color =
+                'white';
+
+            toast.style.fontSize =
+                '14px';
+
+            toast.style.boxShadow =
+                '0 8px 25px rgba(0,0,0,.2)';
+
+            document.body.appendChild(
+                toast
+            );
+
+        }
+
+
+        toast.textContent =
+            message;
+
+        toast.style.display =
+            'block';
+
+
+        clearTimeout(
+            window.offlineToastTimer
+        );
+
+
+        window.offlineToastTimer =
+            setTimeout(() => {
+
+                toast.style.display =
+                    'none';
+
+            }, 4000);
+
+    }
+
+
+    /* =========================================================
+       CONNECTION EVENTS
+    ========================================================= */
+
+    window.addEventListener(
+        'online',
+        async () => {
+
+            updateOfflineStatus();
+
+            showOfflineMessage(
+                'Internet restored. Syncing pending sales...'
+            );
+
+            await syncPendingSales();
+
+        }
+    );
+
+
+    window.addEventListener(
+        'offline',
+        () => {
+
+            updateOfflineStatus();
+
+            updateSyncStatus(
+                false,
+                'Offline'
+            );
+
+            showOfflineMessage(
+                'You are offline. New sales will be saved on this device.'
+            );
+
+        }
+    );
+
+
+    /* =========================================================
+       INITIALIZATION
+    ========================================================= */
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        async () => {
+
+            const scriptUrlInput =
+                document.getElementById(
+                    'script-url'
+                );
+
+
+            if (scriptUrlInput) {
+
+                scriptUrlInput.value =
+                    scriptUrl;
+
+            }
+
+
+            setupMobileMenu();
+
+            lucide.createIcons();
+
+
+            /*
+             * Immediately show current network state.
+             */
+
+            updateOfflineStatus();
+
+
+            /*
+             * Existing Google Sheets initialization.
+             */
+
+            if (scriptUrl) {
+
+                if (navigator.onLine) {
+
+                    triggerSync();
+
+                } else {
+
+                    updateSyncStatus(
+                        false,
+                        'Offline'
+                    );
+
+                    refreshDashboards();
+
+                }
+
+            } else {
+
+                refreshDashboards();
+
+            }
+
+
+            registerServiceWorker();
+
+
+            /*
+             * Give the application a moment to initialise,
+             * then attempt pending-sale synchronization.
+             */
+
+            setTimeout(
+                async () => {
+
+                    if (navigator.onLine) {
+                        await syncPendingSales();
+                    }
+
+                },
+                1000
+            );
+
+        }
+    );
+
+
+    /* =========================================================
+       SERVICE WORKER
+    ========================================================= */
+
+    function registerServiceWorker() {
+
+        if ('serviceWorker' in navigator) {
+
+            window.addEventListener(
+                'load',
+                () => {
+
+                    navigator.serviceWorker
+                        .register('./sw.js')
+                        .then(() => {
+
+                            console.log(
+                                'Service Worker registered.'
+                            );
+
+                        })
+                        .catch(error => {
+
+                            console.warn(
+                                'Service Worker registration failed:',
+                                error
+                            );
+
+                        });
+
+                }
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       MOBILE MENU
+    ========================================================= */
+
+    function setupMobileMenu() {
+
+        const sidebar =
+            document.getElementById(
+                'sidebar'
+            );
+
+        if (!sidebar) return;
+
+    }
+
+
+    function toggleMobileMenu() {
+
+        const sidebar =
+            document.getElementById(
+                'sidebar'
+            );
+
+        if (sidebar) {
+
+            sidebar.classList.toggle(
+                'open'
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       NAVIGATION
+    ========================================================= */
+
+    function switchView(viewId) {
+
+        document
+            .querySelectorAll(
+                '.view-section'
+            )
+            .forEach(section => {
+
+                section.classList.remove(
+                    'active'
+                );
+
+            });
+
+
+        const target =
+            document.getElementById(
+                `${viewId}-view`
+            );
+
+
+        if (target) {
+
+            target.classList.add(
+                'active'
+            );
+
+        }
+
+
+        document
+            .querySelectorAll(
+                '.nav-button'
+            )
+            .forEach(button => {
+
+                button.classList.remove(
+                    'nav-active'
+                );
+
+
+                if (
+                    button.dataset.view ===
+                    viewId
+                ) {
+
+                    button.classList.add(
+                        'nav-active'
+                    );
+
+                }
+
+            });
+
+
+        const sidebar =
+            document.getElementById(
+                'sidebar'
+            );
+
+
+        if (sidebar) {
+
+            sidebar.classList.remove(
+                'open'
+            );
+
+        }
+
+
+        if (viewId === 'dealers') {
+
+            renderDealerInsights();
+
+        }
+
+
+        lucide.createIcons();
+
+    }
+
+
+    /* =========================================================
+       GOOGLE SHEETS SYNC
+    ========================================================= */
+
+    async function triggerSync() {
+
+        if (!scriptUrl) {
+
+            updateSyncStatus(
+                false,
+                'Not Connected'
+            );
+
+            return;
+
+        }
+
+
+        if (!navigator.onLine) {
+
+            updateSyncStatus(
+                false,
+                'Offline'
+            );
+
+            return;
+
+        }
+
+
+        updateSyncStatus(
+            null,
+            'Syncing...'
+        );
+
+
+        try {
+
+            const response =
+                await fetch(
+                    scriptUrl,
+                    {
+                        method: 'GET',
+                        cache: 'no-store'
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    `HTTP ${response.status}`
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            rawData = {
+
+                executives:
+                    Array.isArray(
+                        data.executives
+                    )
+                    ?
+                    data.executives
+                    :
+                    [],
+
+                products:
+                    Array.isArray(
+                        data.products
+                    )
+                    ?
+                    data.products
+                    :
+                    [],
+
+                stockIn:
+                    Array.isArray(
+                        data.stockIn
+                    )
+                    ?
+                    data.stockIn
+                    :
+                    [],
+
+                sales:
+                    Array.isArray(
+                        data.sales
+                    )
+                    ?
+                    data.sales
+                    :
+                    []
+
+            };
+
+
+            updateSyncStatus(
+                true,
+                'Connected'
+            );
+
+
+            refreshDashboards();
+
+
+            /*
+             * Check whether any offline transactions
+             * remain after refreshing.
+             */
+
+            updatePendingBadge();
+
+
+        } catch (error) {
+
+            console.error(
+                'Sync error:',
+                error
+            );
+
+
+            updateSyncStatus(
+                false,
+                navigator.onLine
+                    ?
+                    'Sync Failed'
+                    :
+                    'Offline'
+            );
+
+
+            const settingsStatus =
+                document.getElementById(
+                    'settings-status'
+                );
+
+
+            if (settingsStatus) {
+
+                settingsStatus.innerHTML = `
+                    <div class="text-rose-600">
+                        <strong>Sync failed.</strong>
+                        Please check the Google Apps Script URL and deployment permissions.
+                    </div>
+                `;
+
+            }
+
+        }
+
+    }
+
+
+    /* =========================================================
+       SEND POST
+       ========================================================= */
+
+    async function sendPost(payload) {
+
+        /*
+         * This now returns the actual POST result instead
+         * of firing an un-awaited fetch.
+         */
+
+        return sendPostDirect(
+            payload
+        );
+
+    }
+
+
+    /* =========================================================
+       SAVE SCRIPT URL
+    ========================================================= */
+
+    function saveScriptUrl() {
+
+        const input =
+            document.getElementById(
+                'script-url'
+            );
+
+
+        if (!input) return;
+
+
+        scriptUrl =
+            input.value.trim();
+
+
+        localStorage.setItem(
+            'sheet_sync_url',
+            scriptUrl
+        );
+
+
+        const status =
+            document.getElementById(
+                'settings-status'
+            );
+
+
+        if (!scriptUrl) {
+
+            if (status) {
+
+                status.innerHTML = `
+                    <div class="text-amber-600">
+                        Google Apps Script URL removed.
+                    </div>
+                `;
+
+            }
+
+
+            updateSyncStatus(
+                false,
+                'Not Connected'
+            );
+
+
+            return;
+
+        }
+
+
+        if (status) {
+
+            status.innerHTML = `
+                <div class="text-blue-600">
+                    URL saved. Click <strong>Sync Now</strong> to test the connection.
+                </div>
+            `;
+
+        }
+
+
+        triggerSync();
+
+    }
+
+
+    /* =========================================================
+       SYNC STATUS
+    ========================================================= */
+
+    function updateSyncStatus(
+        success,
+        text
+    ) {
+
+        const sidebarText =
+            document.getElementById(
+                'sidebar-sync-text'
+            );
+
+        const sidebarDot =
+            document.getElementById(
+                'sidebar-sync-dot'
+            );
+
+        const dashboardText =
+            document.getElementById(
+                'dashboard-sync-text'
+            );
+
+        const dashboardDot =
+            document.getElementById(
+                'dashboard-sync-dot'
+            );
+
+        const mobileStatus =
+            document.getElementById(
+                'mobile-sync-status'
+            );
+
+
+        if (sidebarText) {
+
+            sidebarText.textContent =
+                text;
+
+        }
+
+
+        if (dashboardText) {
+
+            dashboardText.textContent =
+                text;
+
+        }
+
+
+        let dotClass =
+            'bg-amber-400';
+
+
+        if (success === true) {
+
+            dotClass =
+                'bg-emerald-400';
+
+        }
+
+
+        if (success === false) {
+
+            dotClass =
+                'bg-rose-400';
+
+        }
+
+
+        [
+            sidebarDot,
+            dashboardDot
+        ]
+        .forEach(dot => {
+
+            if (dot) {
+
+                dot.className =
+                    `pulse-dot ${dotClass}`;
+
+            }
+
+        });
+
+
+        if (mobileStatus) {
+
+            mobileStatus.innerHTML = `
+                <span class="pulse-dot ${dotClass}"></span>
+            `;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       REFRESH ALL DASHBOARDS
+    ========================================================= */
+
+    function refreshDashboards() {
+
+        renderDropdowns();
+
+        renderKPIs();
+
+        renderSalesTable();
+
+        renderInventoryTable();
+
+        renderExecutivesTable();
+
+        renderVisualAnalytics();
+
+        renderDealerInsights();
+
+        updatePendingBadge();
+
+        lucide.createIcons();
+
+    }
+
+
+    /* =========================================================
+       DROPDOWNS
+    ========================================================= */
+
+    function renderDropdowns() {
+
+        const executiveSelect =
+            document.getElementById(
+                'sales-executive'
+            );
+
+
+        if (executiveSelect) {
+
+            const currentValue =
+                executiveSelect.value;
+
+
+            executiveSelect.innerHTML = `
+                <option value="">Select Executive</option>
+            `;
+
+
+            rawData.executives.forEach(
+                executive => {
+
+                    const name =
+                        executive.Name ||
+                        executive.name ||
+                        executive.ExecutiveName ||
+                        executive.Executive ||
+                        '';
+
+
+                    if (!name) return;
+
+
+                    const option =
+                        document.createElement(
+                            'option'
+                        );
+
+
+                    option.value =
+                        name;
+
+                    option.textContent =
+                        name;
+
+
+                    executiveSelect.appendChild(
+                        option
+                    );
+
+                }
+            );
+
+
+            if (currentValue) {
+
+                executiveSelect.value =
+                    currentValue;
+
+            }
+
+        }
+
+
+        const productSelect =
+            document.getElementById(
+                'sales-product'
+            );
+
+
+        if (productSelect) {
+
+            const currentValue =
+                productSelect.value;
+
+
+            productSelect.innerHTML = `
+                <option value="">Select Product</option>
+            `;
+
+
+            rawData.products.forEach(
+                product => {
+
+                    const name =
+                        product.ProductName ||
+                        product.Name ||
+                        product.name ||
+                        '';
+
+
+                    if (!name) return;
+
+
+                    const option =
+                        document.createElement(
+                            'option'
+                        );
+
+
+                    option.value =
+                        name;
+
+                    option.textContent =
+                        name;
+
+
+                    productSelect.appendChild(
+                        option
+                    );
+
+                }
+            );
+
+
+            if (currentValue) {
+
+                productSelect.value =
+                    currentValue;
+
+            }
+
+        }
+
+    }
+
+
+    /* =========================================================
+       SALES FORM
+    ========================================================= */
+
+    async function handleSalesSubmit(event) {
+
+        event.preventDefault();
+
+
+        const executive =
+            document.getElementById(
+                'sales-executive'
+            )
+            .value
+            .trim();
+
+
+        const dealer =
+            document.getElementById(
+                'sales-dealer'
+            )
+            .value
+            .trim();
+
+
+        const product =
+            document.getElementById(
+                'sales-product'
+            )
+            .value
+            .trim();
+
+
+        const quantity =
+            Number(
+                document.getElementById(
+                    'sales-quantity'
+                ).value
+            );
+
+
+        const sellingPrice =
+            Number(
+                document.getElementById(
+                    'sales-price'
+                ).value
+            );
+
+
+        if (
+            !executive ||
+            !dealer ||
+            !product
+        ) {
+
+            alert(
+                'Please complete all required fields.'
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !Number.isFinite(quantity) ||
+            quantity === 0
+        ) {
+
+            alert(
+                'Quantity must be a non-zero number.'
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !Number.isFinite(
+                sellingPrice
+            ) ||
+            sellingPrice < 0
+        ) {
+
+            alert(
+                'Please enter a valid selling price.'
+            );
+
+            return;
+
+        }
+
+
+        const payload = {
+
+            action:
+                'addSale',
+
+            Date:
+                new Date()
+                    .toISOString()
+                    .split('T')[0],
+
+            ExecutiveName:
+                executive,
+
+            DealerName:
+                dealer,
+
+            ProductName:
+                product,
+
+            Quantity:
+                quantity,
+
+            SellingPrice:
+                sellingPrice
+
+        };
+
+
+        const result =
+            await saveSaleOfflineFirst(
+                payload
+            );
+
+
+        /*
+         * Reset only after the transaction has been
+         * successfully stored locally or sent to Sheets.
+         */
+
+        if (
+            result &&
+            result.success
+        ) {
+
+            const form =
+                document.getElementById(
+                    'sales-form'
+                );
+
+            if (form) {
+                form.reset();
+            }
+
+        }
+
+    }
+
+
+    /* =========================================================
+       INVENTORY STOCK CALCULATION
+    ========================================================= */
+
+    function getProductStock(
+        productName
+    ) {
+
+        const totalIn =
+            rawData.stockIn
+                .filter(item =>
+                    String(
+                        item.ProductName ||
+                        item.Name ||
+                        ''
+                    ).trim() ===
+                    productName
+                )
+                .reduce(
+                    (sum, item) => {
+
+                        return sum +
+                            Number(
+                                item.QuantityAdded ||
+                                item.Quantity ||
+                                0
+                            );
+
+                    },
+                    0
+                );
+
+
+        const totalOut =
+            rawData.sales
+                .filter(item =>
+                    String(
+                        item.ProductName ||
+                        ''
+                    ).trim() ===
+                    productName
+                )
+                .reduce(
+                    (sum, item) => {
+
+                        return sum +
+                            Number(
+                                item.Quantity ||
+                                0
+                            );
+
+                    },
+                    0
+                );
+
+
+        return {
+
+            totalIn,
+
+            totalOut,
+
+            stock:
+                totalIn -
+                totalOut
+
+        };
+
+    }
+
+
+    /* =========================================================
+       KPI RENDERING
+    ========================================================= */
+
+    function renderKPIs() {
+
+        const totalSales =
+            rawData.sales.reduce(
+                (sum, sale) => {
+
+                    return sum +
+                        Number(
+                            sale.Quantity ||
+                            0
+                        ) *
+                        Number(
+                            sale.SellingPrice ||
+                            0
+                        );
+
+                },
+                0
+            );
+
+
+        const unitsSold =
+            rawData.sales.reduce(
+                (sum, sale) => {
+
+                    return sum +
+                        Number(
+                            sale.Quantity ||
+                            0
+                        );
+
+                },
+                0
+            );
+
+
+        const inventoryReceived =
+            rawData.stockIn.reduce(
+                (sum, item) => {
+
+                    return sum +
+                        Number(
+                            item.QuantityAdded ||
+                            item.Quantity ||
+                            0
+                        );
+
+                },
+                0
+            );
+
+
+        let lowStock = 0;
+
+
+        rawData.products.forEach(
+            product => {
+
+                const name =
+                    product.ProductName ||
+                    product.Name ||
+                    product.name ||
+                    '';
+
+
+                if (!name) return;
+
+
+                const stock =
+                    getProductStock(
+                        name
+                    ).stock;
+
+
+                if (stock <= 10) {
+
+                    lowStock++;
+
+                }
+
+            }
+        );
+
+
+        setText(
+            'kpi-total-sales',
+            formatCurrency(
+                totalSales
+            )
+        );
+
+
+        setText(
+            'kpi-units-sold',
+            formatNumber(
+                unitsSold
+            )
+        );
+
+
+        setText(
+            'kpi-inventory',
+            formatNumber(
+                inventoryReceived
+            )
+        );
+
+
+        setText(
+            'kpi-low-stock',
+            formatNumber(
+                lowStock
+            )
+        );
+
+
+        const executiveStats = {};
+
+
+        rawData.sales.forEach(
+            sale => {
+
+                const name =
+                    String(
+                        sale.ExecutiveName ||
+                        sale.Executive ||
+                        ''
+                    ).trim();
+
+
+                if (!name) return;
+
+
+                if (
+                    !executiveStats[name]
+                ) {
+
+                    executiveStats[name] =
+                        0;
+
+                }
+
+
+                executiveStats[name] +=
+                    Number(
+                        sale.Quantity ||
+                        0
+                    ) *
+                    Number(
+                        sale.SellingPrice ||
+                        0
+                    );
+
+            }
+        );
+
+
+        const topExecutive =
+            Object.entries(
+                executiveStats
+            )
+            .sort(
+                (a, b) =>
+                    b[1] - a[1]
+            )[0];
+
+
+        if (topExecutive) {
+
+            const name =
+                topExecutive[0];
+
+            const revenue =
+                topExecutive[1];
+
+
+            setText(
+                'top-executive-name',
+                name
+            );
+
+
+            setText(
+                'top-executive-revenue',
+                formatCurrency(
+                    revenue
+                )
+            );
+
+
+            setText(
+                'top-executive-initial',
+                name
+                    .charAt(0)
+                    .toUpperCase()
+            );
+
+        } else {
+
+            setText(
+                'top-executive-name',
+                'No Data'
+            );
+
+            setText(
+                'top-executive-revenue',
+                '$0.00'
+            );
+
+            setText(
+                'top-executive-initial',
+                '--'
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       RECENT SALES
+    ========================================================= */
+
+    function renderRecentSales() {
+
+        const container =
+            document.getElementById(
+                'recent-sales-list'
+            );
+
+
+        if (!container) return;
+
+
+        const sales =
+            [...rawData.sales]
+            .reverse()
+            .slice(0, 5);
+
+
+        if (!sales.length) {
+
+            container.innerHTML = `
+                <div class="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+                    No sales transactions available.
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        container.innerHTML =
+            sales.map(
+                sale => {
+
+                    const quantity =
+                        Number(
+                            sale.Quantity ||
+                            0
+                        );
+
+
+                    const price =
+                        Number(
+                            sale.SellingPrice ||
+                            0
+                        );
+
+
+                    const revenue =
+                        quantity *
+                        price;
+
+
+                    const dealer =
+                        escapeHtml(
+                            sale.DealerName ||
+                            'Unknown Dealer'
+                        );
+
+
+                    const product =
+                        escapeHtml(
+                            sale.ProductName ||
+                            'Unknown Product'
+                        );
+
+
+                    const executive =
+                        escapeHtml(
+                            sale.ExecutiveName ||
+                            'Unknown Executive'
+                        );
+
+
+                    const date =
+                        escapeHtml(
+                            sale.Date ||
+                            ''
+                        );
+
+
+                    const isReturn =
+                        quantity < 0;
+
+
+                    const offlineTag =
+                        sale._offline
+                        ?
+                        `
+                        <span class="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase text-amber-700">
+                            Pending Sync
+                        </span>
+                        `
+                        :
+                        '';
+
+
+                    return `
+
+                        <div class="flex items-center justify-between gap-4 rounded-xl border border-slate-100 p-4">
+
+                            <div class="min-w-0">
+
+                                <div class="flex items-center gap-2 flex-wrap">
+
+                                    <div class="truncate font-semibold text-slate-900">
+                                        ${product}
+                                    </div>
+
+                                    ${
+                                        isReturn
+                                        ?
+                                        `<span class="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-bold uppercase text-rose-600">Return</span>`
+                                        :
+                                        ''
+                                    }
+
+                                    ${offlineTag}
+
+                                </div>
+
+                                <div class="mt-1 truncate text-xs text-slate-500">
+                                    ${dealer} · ${executive}
+                                </div>
+
+                                <div class="mt-1 text-xs text-slate-400">
+                                    ${date}
+                                </div>
+
+                            </div>
+
+                            <div class="shrink-0 text-right">
+
+                                <div class="font-bold ${isReturn ? 'text-rose-600' : 'text-slate-900'}">
+                                    ${formatCurrency(revenue)}
+                                </div>
+
+                                <div class="mt-1 text-xs text-slate-500">
+                                    Qty: ${formatNumber(quantity)}
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    `;
+
+                }
+            )
+            .join('');
+
+    }
+
+
+    /* =========================================================
+       SALES TABLE
+    ========================================================= */
+
+    function renderSalesTable() {
+
+        const body =
+            document.getElementById(
+                'sales-table-body'
+            );
+
+
+        if (!body) return;
+
+
+        const search =
+            String(
+                document.getElementById(
+                    'sales-search'
+                )?.value ||
+                ''
+            )
+            .toLowerCase()
+            .trim();
+
+
+        const filtered =
+            rawData.sales.filter(
+                sale => {
+
+                    const text = [
+
+                        sale.Date,
+
+                        sale.ExecutiveName,
+
+                        sale.DealerName,
+
+                        sale.ProductName
+
+                    ]
+                    .join(' ')
+                    .toLowerCase();
+
+
+                    return (
+                        !search ||
+                        text.includes(search)
+                    );
+
+                }
+            );
+
+
+        if (!filtered.length) {
+
+            body.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-4 py-12 text-center text-sm text-slate-500">
+                        No sales records found.
+                    </td>
+                </tr>
+            `;
+
+
+            renderRecentSales();
+
+            return;
+
+        }
+
+
+        body.innerHTML =
+            filtered
+            .slice()
+            .reverse()
+            .map(
+                sale => {
+
+                    const quantity =
+                        Number(
+                            sale.Quantity ||
+                            0
+                        );
+
+
+                    const price =
+                        Number(
+                            sale.SellingPrice ||
+                            0
+                        );
+
+
+                    const revenue =
+                        quantity *
+                        price;
+
+
+                    const isReturn =
+                        quantity < 0;
+
+
+                    const offlineBadge =
+                        sale._offline
+                        ?
+                        `
+                        <span class="ml-2 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase text-amber-700">
+                            Pending
+                        </span>
+                        `
+                        :
+                        '';
+
+
+                    return `
+
+                        <tr class="table-row-accent border-b border-slate-100">
+
+                            <td class="px-4 py-3 text-slate-600">
+                                ${escapeHtml(sale.Date || '')}
+                            </td>
+
+                            <td class="px-4 py-3 font-medium text-slate-800">
+                                ${escapeHtml(sale.ExecutiveName || '')}
+                            </td>
+
+                            <td class="px-4 py-3 font-medium text-slate-800">
+                                ${escapeHtml(sale.DealerName || '')}
+                            </td>
+
+                            <td class="px-4 py-3 text-slate-600">
+                                ${escapeHtml(sale.ProductName || '')}
+                                ${offlineBadge}
+                            </td>
+
+                            <td class="px-4 py-3 ${isReturn ? 'font-bold text-rose-600' : 'text-slate-700'}">
+                                ${formatNumber(quantity)}
+                            </td>
+
+                            <td class="px-4 py-3 text-slate-600">
+                                ${formatCurrency(price)}
+                            </td>
+
+                            <td class="px-4 py-3 font-semibold ${isReturn ? 'text-rose-600' : 'text-slate-900'}">
+                                ${formatCurrency(revenue)}
+                            </td>
+
+                        </tr>
+
+                    `;
+
+                }
+            )
+            .join('');
+
+
+        renderRecentSales();
+
+    }
+
+
+    /* =========================================================
+       INVENTORY TABLE
+    ========================================================= */
+
+    function renderInventoryTable() {
+
+        const body =
+            document.getElementById(
+                'inventory-table-body'
+            );
+
+
+        if (!body) return;
+
+
+        if (!rawData.products.length) {
+
+            body.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-4 py-12 text-center text-sm text-slate-500">
+                        No products available.
+                    </td>
+                </tr>
+            `;
+
+            return;
+
+        }
+
+
+        body.innerHTML =
+            rawData.products.map(
+                product => {
+
+                    const name =
+                        product.ProductName ||
+                        product.Name ||
+                        product.name ||
+                        '';
+
+
+                    const stockInfo =
+                        getProductStock(
+                            name
+                        );
+
+
+                    const stock =
+                        stockInfo.stock;
+
+
+                    let statusHtml;
+
+
+                    if (stock <= 0) {
+
+                        statusHtml = `
+                            <span class="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-600">
+                                Out of Stock
+                            </span>
+                        `;
+
+                    } else if (stock <= 10) {
+
+                        statusHtml = `
+                            <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-600">
+                                Low Stock
+                            </span>
+                        `;
+
+                    } else {
+
+                        statusHtml = `
+                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-600">
+                                Healthy
+                            </span>
+                        `;
+
+                    }
+
+
+                    return `
+
+                        <tr class="table-row-accent border-b border-slate-100">
+
+                            <td class="px-4 py-4 font-semibold text-slate-800">
+                                ${escapeHtml(name)}
+                            </td>
+
+                            <td class="px-4 py-4 text-slate-600">
+                                ${formatNumber(stockInfo.totalIn)}
+                            </td>
+
+                            <td class="px-4 py-4 text-slate-600">
+                                ${formatNumber(stockInfo.totalOut)}
+                            </td>
+
+                            <td class="px-4 py-4 text-lg font-bold ${stock <= 10 ? 'text-amber-600' : 'text-slate-900'}">
+                                ${formatNumber(stock)}
+                            </td>
+
+                            <td class="px-4 py-4">
+                                ${statusHtml}
+                            </td>
+
+                        </tr>
+
+                    `;
+
+                }
+            )
+            .join('');
+
+    }
+
+
+    /* =========================================================
+       EXECUTIVES TABLE
+    ========================================================= */
+
+    function renderExecutivesTable() {
+
+        const body =
+            document.getElementById(
+                'executives-table-body'
+            );
+
+
+        if (!body) return;
+
+
+        const stats = {};
+
+
+        rawData.sales.forEach(
+            sale => {
+
+                const name =
+                    String(
+                        sale.ExecutiveName ||
+                        sale.Executive ||
+                        ''
+                    ).trim();
+
+
+                if (!name) return;
+
+
+                if (!stats[name]) {
+
+                    stats[name] = {
+
+                        count: 0,
+
+                        revenue: 0
+
+                    };
+
+                }
+
+
+                stats[name].count++;
+
+
+                stats[name].revenue +=
+                    Number(
+                        sale.Quantity ||
+                        0
+                    ) *
+                    Number(
+                        sale.SellingPrice ||
+                        0
+                    );
+
+            }
+        );
+
+
+        const rows =
+            Object.entries(
+                stats
+            )
+            .sort(
+                (a, b) =>
+                    b[1].revenue -
+                    a[1].revenue
+            );
+
+
+        if (!rows.length) {
+
+            body.innerHTML = `
+                <tr>
+                    <td colspan="3" class="px-4 py-12 text-center text-sm text-slate-500">
+                        No executive sales data available.
+                    </td>
+                </tr>
+            `;
+
+            return;
+
+        }
+
+
+        body.innerHTML =
+            rows.map(
+                ([name, stat]) => {
+
+                    return `
+
+                        <tr class="table-row-accent border-b border-slate-100">
+
+                            <td class="px-4 py-4 font-semibold text-slate-800">
+                                ${escapeHtml(name)}
+                            </td>
+
+                            <td class="px-4 py-4 text-slate-600">
+                                ${formatNumber(stat.count)}
+                            </td>
+
+                            <td class="px-4 py-4 font-bold text-slate-900">
+                                ${formatCurrency(stat.revenue)}
+                            </td>
+
+                        </tr>
+
+                    `;
+
+                }
+            )
+            .join('');
+
+    }
+
+
+    /* =========================================================
+       VISUAL ANALYTICS
+    ========================================================= */
+
+    function renderVisualAnalytics() {
+
+        renderRevenueChart();
+
+        renderStockChart();
+
+    }
+
+
+    function renderRevenueChart() {
+
+        const canvas =
+            document.getElementById(
+                'revenueChart'
+            );
+
+
+        if (!canvas) return;
+
+
+        if (revenueChart) {
+
+            revenueChart.destroy();
+
+        }
+
+
+        const sales =
+            rawData.sales.slice(-10);
+
+
+        const labels =
+            sales.map(
+                sale =>
+                    sale.Date || ''
+            );
+
+
+        const values =
+            sales.map(
+                sale =>
+                    Number(
+                        sale.Quantity ||
+                        0
+                    ) *
+                    Number(
+                        sale.SellingPrice ||
+                        0
+                    )
+            );
+
+
+        revenueChart =
+            new Chart(
+                canvas,
+                {
+
+                    type: 'line',
+
+                    data: {
+
+                        labels,
+
+                        datasets: [
+
+                            {
+
+                                label:
+                                    'Revenue',
+
+                                data:
+                                    values,
+
+                                borderColor:
+                                    '#2563eb',
+
+                                backgroundColor:
+                                    'rgba(37,99,235,0.12)',
+
+                                fill:
+                                    true,
+
+                                tension:
+                                    0.35,
+
+                                borderWidth:
+                                    3,
+
+                                pointRadius:
+                                    4
+
+                            }
+
+                        ]
+
+                    },
+
+                    options: {
+
+                        responsive:
+                            true,
+
+                        maintainAspectRatio:
+                            false,
+
+                        plugins: {
+
+                            legend: {
+                                display: false
+                            }
+
+                        },
+
+                        scales: {
+
+                            y: {
+
+                                beginAtZero:
+                                    true,
+
+                                ticks: {
+
+                                    callback:
+                                        value =>
+                                            formatCurrency(
+                                                value
+                                            )
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+            );
+
+    }
+
+
+    function renderStockChart() {
+
+        const canvas =
+            document.getElementById(
+                'stockChart'
+            );
+
+
+        if (!canvas) return;
+
+
+        if (stockChart) {
+
+            stockChart.destroy();
+
+        }
+
+
+        let healthy = 0;
+        let low = 0;
+        let out = 0;
+
+
+        rawData.products.forEach(
+            product => {
+
+                const name =
+                    product.ProductName ||
+                    product.Name ||
+                    product.name ||
+                    '';
+
+
+                const stock =
+                    getProductStock(
+                        name
+                    ).stock;
+
+
+                if (stock <= 0) {
+
+                    out++;
+
+                } else if (stock <= 10) {
+
+                    low++;
+
+                } else {
+
+                    healthy++;
+
+                }
+
+            }
+        );
+
+
+        stockChart =
+            new Chart(
+                canvas,
+                {
+
+                    type: 'doughnut',
+
+                    data: {
+
+                        labels: [
+                            'Healthy',
+                            'Low Stock',
+                            'Out of Stock'
+                        ],
+
+                        datasets: [
+
+                            {
+
+                                data: [
+                                    healthy,
+                                    low,
+                                    out
+                                ],
+
+                                backgroundColor: [
+                                    '#10b981',
+                                    '#f59e0b',
+                                    '#ef4444'
+                                ],
+
+                                borderWidth:
+                                    0
+
+                            }
+
+                        ]
+
+                    },
+
+                    options: {
+
+                        responsive:
+                            true,
+
+                        maintainAspectRatio:
+                            false,
+
+                        cutout:
+                            '68%',
+
+                        plugins: {
+
+                            legend: {
+                                position: 'bottom'
+                            }
+
+                        }
+
+                    }
+
+                }
+            );
+
+    }
+
+
+    /* =========================================================
+       DEALER INSIGHTS
+    ========================================================= */
+
+    function normalizeDealerName(
+        name
+    ) {
+
+        return String(
+            name || ''
+        )
+        .trim()
+        .replace(
+            /\s+/g,
+            ' '
+        )
+        .toLowerCase();
+
+    }
+
+
+    function getDealerInsights() {
+
+        const dealerMap = {};
+
+
+        rawData.sales.forEach(
+            sale => {
+
+                const rawName =
+                    String(
+                        sale.DealerName ||
+                        ''
+                    )
+                    .trim()
+                    .replace(
+                        /\s+/g,
+                        ' '
+                    );
+
+
+                if (!rawName) return;
+
+
+                const key =
+                    normalizeDealerName(
+                        rawName
+                    );
+
+
+                if (!dealerMap[key]) {
+
+                    dealerMap[key] = {
+
+                        name:
+                            rawName,
+
+                        transactions:
+                            0,
+
+                        grossUnits:
+                            0,
+
+                        returnedUnits:
+                            0,
+
+                        netUnits:
+                            0,
+
+                        revenue:
+                            0,
+
+                        returnTransactions:
+                            0
+
+                    };
+
+                }
+
+
+                const quantity =
+                    Number(
+                        sale.Quantity ||
+                        0
+                    );
+
+
+                const price =
+                    Number(
+                        sale.SellingPrice ||
+                        0
+                    );
+
+
+                const revenue =
+                    quantity *
+                    price;
+
+
+                dealerMap[key]
+                    .transactions++;
+
+
+                dealerMap[key]
+                    .netUnits +=
+                    quantity;
+
+
+                dealerMap[key]
+                    .revenue +=
+                    revenue;
+
+
+                if (quantity > 0) {
+
+                    dealerMap[key]
+                        .grossUnits +=
+                        quantity;
+
+                }
+
+
+                if (quantity < 0) {
+
+                    dealerMap[key]
+                        .returnedUnits +=
+                        Math.abs(
+                            quantity
+                        );
+
+
+                    dealerMap[key]
+                        .returnTransactions++;
+
+                }
+
+            }
+        );
+
+
+        return Object.values(
+            dealerMap
+        )
+        .sort(
+            (a, b) =>
+                b.revenue -
+                a.revenue
+        );
+
+    }
+
+
+    function renderDealerInsights() {
+
+        const dealers =
+            getDealerInsights();
+
+
+        renderDealerKPIs(
+            dealers
+        );
+
+        renderDealerChart(
+            dealers
+        );
+
+        renderDealerSnapshot(
+            dealers
+        );
+
+        renderDealerTable();
+
+    }
+
+
+    /* =========================================================
+       DEALER KPI CARDS
+    ========================================================= */
+
+    function renderDealerKPIs(
+        dealers
+    ) {
+
+        const totalDealers =
+            dealers.length;
+
+
+        const totalTransactions =
+            dealers.reduce(
+                (sum, dealer) =>
+                    sum +
+                    dealer.transactions,
+                0
+            );
+
+
+        const totalReturns =
+            dealers.reduce(
+                (sum, dealer) =>
+                    sum +
+                    dealer.returnedUnits,
+                0
+            );
+
+
+        const topRevenueDealer =
+            dealers[0];
+
+
+        const topUnitsDealer =
+            dealers
+            .slice()
+            .sort(
+                (a, b) =>
+                    b.netUnits -
+                    a.netUnits
+            )[0];
+
+
+        setText(
+            'dealer-kpi-total',
+            formatNumber(
+                totalDealers
+            )
+        );
+
+
+        setText(
+            'dealer-kpi-transactions',
+            formatNumber(
+                totalTransactions
+            )
+        );
+
+
+        setText(
+            'dealer-kpi-returns',
+            formatNumber(
+                totalReturns
+            )
+        );
+
+
+        if (topRevenueDealer) {
+
+            setText(
+                'dealer-kpi-top-name',
+                topRevenueDealer.name
+            );
+
+
+            setText(
+                'dealer-kpi-top-revenue',
+                formatCurrency(
+                    topRevenueDealer.revenue
+                )
+            );
+
+        } else {
+
+            setText(
+                'dealer-kpi-top-name',
+                '--'
+            );
+
+
+            setText(
+                'dealer-kpi-top-revenue',
+                '$0.00'
+            );
+
+        }
+
+
+        if (topUnitsDealer) {
+
+            setText(
+                'dealer-kpi-top-units-name',
+                topUnitsDealer.name
+            );
+
+
+            setText(
+                'dealer-kpi-top-units',
+                formatNumber(
+                    topUnitsDealer.netUnits
+                )
+            );
+
+        } else {
+
+            setText(
+                'dealer-kpi-top-units-name',
+                '--'
+            );
+
+
+            setText(
+                'dealer-kpi-top-units',
+                '0'
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       DEALER REVENUE CHART
+    ========================================================= */
+
+    function renderDealerChart(
+        dealers
+    ) {
+
+        const canvas =
+            document.getElementById(
+                'dealerChart'
+            );
+
+
+        if (!canvas) return;
+
+
+        if (dealerChart) {
+
+            dealerChart.destroy();
+
+            dealerChart = null;
+
+        }
+
+
+        const topDealers =
+            dealers.slice(0, 10);
+
+
+        if (!topDealers.length) {
+
+            const context =
+                canvas.getContext(
+                    '2d'
+                );
+
+
+            context.clearRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+
+            return;
+
+        }
+
+
+        const labels =
+            topDealers.map(
+                dealer =>
+                    dealer.name
+            );
+
+
+        const values =
+            topDealers.map(
+                dealer =>
+                    dealer.revenue
+            );
+
+
+        dealerChart =
+            new Chart(
+                canvas,
+                {
+
+                    type: 'bar',
+
+                    data: {
+
+                        labels,
+
+                        datasets: [
+
+                            {
+
+                                label:
+                                    'Net Revenue',
+
+                                data:
+                                    values,
+
+                                backgroundColor:
+                                    '#2563eb',
+
+                                borderRadius:
+                                    8,
+
+                                borderSkipped:
+                                    false
+
+                            }
+
+                        ]
+
+                    },
+
+                    options: {
+
+                        responsive:
+                            true,
+
+                        maintainAspectRatio:
+                            false,
+
+                        indexAxis:
+                            'y',
+
+                        plugins: {
+
+                            legend: {
+                                display: false
+                            },
+
+                            tooltip: {
+
+                                callbacks: {
+
+                                    label:
+                                        function(
+                                            context
+                                        ) {
+
+                                            return (
+                                                'Revenue: ' +
+                                                formatCurrency(
+                                                    context.raw
+                                                )
+                                            );
+
+                                        }
+
+                                }
+
+                            }
+
+                        },
+
+                        scales: {
+
+                            x: {
+
+                                beginAtZero:
+                                    true,
+
+                                ticks: {
+
+                                    callback:
+                                        value =>
+                                            formatCurrency(
+                                                value
+                                            )
+
+                                }
+
+                            },
+
+                            y: {
+
+                                ticks: {
+
+                                    autoSkip:
+                                        false
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+            );
+
+    }
+
+
+    /* =========================================================
+       DEALER SNAPSHOT
+    ========================================================= */
+
+    function renderDealerSnapshot(
+        dealers
+    ) {
+
+        const container =
+            document.getElementById(
+                'dealer-snapshot-list'
+            );
+
+
+        if (!container) return;
+
+
+        const topDealers =
+            dealers.slice(0, 5);
+
+
+        if (!topDealers.length) {
+
+            container.innerHTML = `
+                <div class="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+                    No dealer sales data available.
+                </div>
+            `;
+
+            return;
+
+        }
+
+
+        const maxRevenue =
+            Math.max(
+                ...topDealers.map(
+                    dealer =>
+                        dealer.revenue
+                ),
+                1
+            );
+
+
+        container.innerHTML =
+            topDealers
+            .map(
+                (dealer, index) => {
+
+                    const percentage =
+                        Math.max(
+                            0,
+                            Math.min(
+                                100,
+                                (
+                                    dealer.revenue /
+                                    maxRevenue
+                                ) *
+                                100
+                            )
+                        );
+
+
+                    return `
+
+                        <div>
+
+                            <div class="mb-2 flex items-center justify-between gap-3">
+
+                                <div class="flex min-w-0 items-center gap-3">
+
+                                    <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-700">
+                                        ${index + 1}
+                                    </div>
+
+                                    <div class="truncate text-sm font-semibold text-slate-800">
+                                        ${escapeHtml(dealer.name)}
+                                    </div>
+
+                                </div>
+
+                                <div class="shrink-0 text-sm font-bold text-slate-900">
+                                    ${formatCurrency(dealer.revenue)}
+                                </div>
+
+                            </div>
+
+                            <div class="progress-track">
+
+                                <div class="progress-fill bg-blue-500"
+                                     style="width: ${percentage}%">
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    `;
+
+                }
+            )
+            .join('');
+
+    }
+
+
+    /* =========================================================
+       DEALER TABLE
+    ========================================================= */
+
+    function renderDealerTable() {
+
+        const body =
+            document.getElementById(
+                'dealer-table-body'
+            );
+
+
+        if (!body) return;
+
+
+        const dealers =
+            getDealerInsights();
+
+
+        const search =
+            String(
+                document.getElementById(
+                    'dealer-search'
+                )?.value ||
+                ''
+            )
+            .toLowerCase()
+            .trim();
+
+
+        const filtered =
+            dealers.filter(
+                dealer =>
+                    dealer.name
+                    .toLowerCase()
+                    .includes(search)
+            );
+
+
+        if (!filtered.length) {
+
+            body.innerHTML = `
+                <tr>
+                    <td colspan="8"
+                        class="px-4 py-12 text-center text-sm text-slate-500">
+
+                        ${
+                            dealers.length
+                            ?
+                            'No dealers match your search.'
+                            :
+                            'No dealer sales data available.'
+                        }
+
+                    </td>
+                </tr>
+            `;
+
+            return;
+
+        }
+
+
+        body.innerHTML =
+            filtered
+            .map(
+                dealer => {
+
+                    const averageTransaction =
+                        dealer.transactions > 0
+                        ?
+                        dealer.revenue /
+                        dealer.transactions
+                        :
+                        0;
+
+
+                    const rank =
+                        dealers.indexOf(
+                            dealer
+                        ) +
+                        1;
+
+
+                    return `
+
+                        <tr class="table-row-accent border-b border-slate-100">
+
+                            <td class="px-4 py-4">
+
+                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-700">
+
+                                    ${rank}
+
+                                </span>
+
+                            </td>
+
+
+                            <td class="px-4 py-4">
+
+                                <div class="font-semibold text-slate-900">
+                                    ${escapeHtml(dealer.name)}
+                                </div>
+
+                            </td>
+
+
+                            <td class="px-4 py-4 text-slate-600">
+                                ${formatNumber(dealer.transactions)}
+                            </td>
+
+
+                            <td class="px-4 py-4 text-slate-600">
+                                ${formatNumber(dealer.grossUnits)}
+                            </td>
+
+
+                            <td class="px-4 py-4">
+
+                                ${
+                                    dealer.returnedUnits > 0
+                                    ?
+                                    `<span class="font-semibold text-rose-600">
+                                        ${formatNumber(dealer.returnedUnits)}
+                                    </span>`
+                                    :
+                                    `<span class="text-slate-400">
+                                        0
+                                    </span>`
+                                }
+
+                            </td>
+
+
+                            <td class="px-4 py-4 font-semibold ${dealer.netUnits < 0 ? 'text-rose-600' : 'text-slate-900'}">
+
+                                ${formatNumber(
+                                    dealer.netUnits
+                                )}
+
+                            </td>
+
+
+                            <td class="px-4 py-4 font-bold ${dealer.revenue < 0 ? 'text-rose-600' : 'text-slate-900'}">
+
+                                ${formatCurrency(
+                                    dealer.revenue
+                                )}
+
+                            </td>
+
+
+                            <td class="px-4 py-4 text-slate-600">
+
+                                ${formatCurrency(
+                                    averageTransaction
+                                )}
+
+                            </td>
+
+                        </tr>
+
+                    `;
+
+                }
+            )
+            .join('');
+
+    }
+
+
+    /* =========================================================
+       CSV EXPORT
+    ========================================================= */
+
+    function exportToCSV(type) {
+
+        let rows = [];
+
+        let filename =
+            'export.csv';
+
+
+        if (type === 'sales') {
+
+            rows.push([
+
+                'Date',
+
+                'Executive',
+
+                'Dealer',
+
+                'Product',
+
+                'Quantity',
+
+                'Selling Price',
+
+                'Revenue'
+
+            ]);
+
+
+            rawData.sales.forEach(
+                sale => {
+
+                    const quantity =
+                        Number(
+                            sale.Quantity ||
+                            0
+                        );
+
+
+                    const price =
+                        Number(
+                            sale.SellingPrice ||
+                            0
+                        );
+
+
+                    const revenue =
+                        quantity *
+                        price;
+
+
+                    rows.push([
+
+                        sale.Date ||
+                            '',
+
+                        sale.ExecutiveName ||
+                            '',
+
+                        sale.DealerName ||
+                            '',
+
+                        sale.ProductName ||
+                            '',
+
+                        quantity,
+
+                        price,
+
+                        revenue
+
+                    ]);
+
+                }
+            );
+
+
+            filename =
+                'sales-export.csv';
+
+        }
+
+
+        else if (
+            type ===
+            'inventory'
+        ) {
+
+            rows.push([
+
+                'Product Name',
+
+                'Total In',
+
+                'Total Out',
+
+                'Current Stock',
+
+                'Status'
+
+            ]);
+
+
+            rawData.products.forEach(
+                product => {
+
+                    const name =
+                        product.ProductName ||
+                        product.Name ||
+                        product.name ||
+                        '';
+
+
+                    const stockInfo =
+                        getProductStock(
+                            name
+                        );
+
+
+                    let status =
+                        'Healthy';
+
+
+                    if (
+                        stockInfo.stock <= 0
+                    ) {
+
+                        status =
+                            'Out of Stock';
+
+                    } else if (
+                        stockInfo.stock <= 10
+                    ) {
+
+                        status =
+                            'Low Stock';
+
+                    }
+
+
+                    rows.push([
+
+                        name,
+
+                        stockInfo.totalIn,
+
+                        stockInfo.totalOut,
+
+                        stockInfo.stock,
+
+                        status
+
+                    ]);
+
+                }
+            );
+
+
+            filename =
+                'inventory-export.csv';
+
+        }
+
+
+        else if (
+            type ===
+            'dealers'
+        ) {
+
+            rows.push([
+
+                'Rank',
+
+                'Dealer',
+
+                'Transactions',
+
+                'Gross Units',
+
+                'Return Units',
+
+                'Net Units',
+
+                'Revenue',
+
+                'Average Transaction'
+
+            ]);
+
+
+            const dealers =
+                getDealerInsights();
+
+
+            dealers.forEach(
+                (dealer, index) => {
+
+                    const averageTransaction =
+                        dealer.transactions > 0
+                        ?
+                        dealer.revenue /
+                        dealer.transactions
+                        :
+                        0;
+
+
+                    rows.push([
+
+                        index + 1,
+
+                        dealer.name,
+
+                        dealer.transactions,
+
+                        dealer.grossUnits,
+
+                        dealer.returnedUnits,
+
+                        dealer.netUnits,
+
+                        dealer.revenue,
+
+                        averageTransaction
+
+                    ]);
+
+                }
+            );
+
+
+            filename =
+                'dealer-insights-export.csv';
+
+        }
+
+
+        else {
+
+            return;
+
+        }
+
+
+        const csv =
+            rows
+            .map(
+                row =>
+                    row
+                    .map(
+                        value =>
+                            csvEscape(
+                                value
+                            )
+                    )
+                    .join(',')
+            )
+            .join('\n');
+
+
+        const blob =
+            new Blob(
+                [csv],
+                {
+                    type:
+                        'text/csv;charset=utf-8;'
+                }
+            );
+
+
+        const url =
+            URL.createObjectURL(
+                blob
+            );
+
+
+        const link =
+            document.createElement(
+                'a'
+            );
+
+
+        link.href =
+            url;
+
+        link.download =
+            filename;
+
+
+        document.body.appendChild(
+            link
+        );
+
+
+        link.click();
+
+
+        document.body.removeChild(
+            link
+        );
+
+
+        URL.revokeObjectURL(
+            url
+        );
+
+    }
+
+
+    function csvEscape(value) {
+
+        const text =
+            String(
+                value ?? ''
+            );
+
+
+        if (
+            text.includes(',') ||
+            text.includes('"') ||
+            text.includes('\n')
+        ) {
+
+            return '"' +
+                text.replace(
+                    /"/g,
+                    '""'
+                ) +
+                '"';
+
+        }
+
+
+        return text;
+
+    }
+
+
+    /* =========================================================
+       HELPERS
+    ========================================================= */
+
+    function setText(
+        id,
+        value
+    ) {
+
+        const element =
+            document.getElementById(
+                id
+            );
+
+
+        if (element) {
+
+            element.textContent =
+                value;
+
+        }
+
+    }
+
+
+    function formatNumber(
+        value
+    ) {
+
+        const number =
+            Number(
+                value || 0
+            );
+
+
+        return new Intl.NumberFormat(
+            'en-IN',
+            {
+                maximumFractionDigits:
+                    2
+            }
+        )
+        .format(number);
+
+    }
+
+
+    function formatCurrency(
+        value
+    ) {
+
+        const number =
+            Number(
+                value || 0
+            );
+
+
+        return new Intl.NumberFormat(
+            'en-US',
+            {
+                style:
+                    'currency',
+
+                currency:
+                    'USD',
+
+                maximumFractionDigits:
+                    2
+            }
+        )
+        .format(number);
+
+    }
+
+
+    function escapeHtml(
+        value
+    ) {
+
+        return String(
+            value ?? ''
+        )
+        .replace(
+            /&/g,
+            '&amp;'
+        )
+        .replace(
+            /</g,
+            '&lt;'
+        )
+        .replace(
+            />/g,
+            '&gt;'
+        )
+        .replace(
+            /"/g,
+            '&quot;'
+        )
+        .replace(
+            /'/g,
+            '&#039;'
+        );
+
+    }
+
+</script>
+
+</body>
+</html>
